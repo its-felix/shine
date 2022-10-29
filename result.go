@@ -6,6 +6,7 @@ type Result[T any] interface {
 	IsErr() bool
 	ExpectErr(msg string) error
 	UnwrapErr() error
+	UnwrapBoth() (T, error)
 	OrElse(fnc func(error) Result[T]) Result[T]
 	Err() Option[error]
 	Ok() Option[T]
@@ -75,6 +76,10 @@ func (ok Ok[T]) ExpectErr(msg string) error {
 
 func (ok Ok[T]) UnwrapErr() error {
 	panic("UnwrapErr on Ok")
+}
+
+func (ok Ok[T]) UnwrapBoth() (T, error) {
+	return ok.v, nil
 }
 
 func (ok Ok[T]) Err() Option[error] {
@@ -158,6 +163,11 @@ func (e Err[T]) UnwrapErr() error {
 	return e.err
 }
 
+func (e Err[T]) UnwrapBoth() (T, error) {
+	var def T
+	return def, e.err
+}
+
 func (e Err[T]) Err() Option[error] {
 	return NewSome(e.err)
 }
@@ -199,6 +209,18 @@ func NewResult[T any](v T, err error) Result[T] {
 	} else {
 		return NewOk(v)
 	}
+}
+
+func NewResultWithV[T any](fnc func() T, err error) Result[T] {
+	if err != nil {
+		return NewErr[T](err)
+	} else {
+		return NewOk(fnc())
+	}
+}
+
+func NewResultWithE[T any](v T, fnc func() error) Result[T] {
+	return NewResult(v, fnc())
 }
 
 func NewOk[T any](v T) Result[T] {
