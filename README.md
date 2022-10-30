@@ -1,7 +1,11 @@
 # shine
-like metal before it oxidizes
+<small>like metal prior oxidation</small>
+
+[![Go Reference](https://pkg.go.dev/badge/github.com/its-felix/shine.svg)](https://pkg.go.dev/github.com/its-felix/shine)
+[![Go Report](https://goreportcard.com/badge/github.com/labstack/echo?style=flat-square)](https://goreportcard.com/report/github.com/its-felix/shine)
 
 Rust inspired implementation of `Option[T]` and `Result[T]` for Go.
+
 
 ---
 
@@ -77,3 +81,27 @@ func something() (string, error) {
 	return shine.NewOk("hello").UnwrapBoth() // (string, error)
 }
 ```
+
+## Performance
+Since both `Result` and `Option` are wrapper-types and not natively built into the language like in Rust, they come with some overhead.
+
+Given the following benchmark:
+```golang
+// vanilla
+something, err := getSomethingErrornous()
+if err == nil {
+	doSomething(something)// no-op
+} else {
+	doSomethingElse(err)// no-op
+}
+
+// shine
+r := shine.NewResult(getSomethingErrornous())
+if r.IsOk() {
+    doSomething(r.Unwrap())// no-op
+} else {
+    doSomethingElse(r.UnwrapErr())// no-op
+}
+```
+
+shine is 3 times slower than vanilla, with vanilla being at `1.248 ns/op` and shine at `3.617 ns/op` (MacBook Pro 2021 M1 Pro)
