@@ -1,208 +1,184 @@
 package shine
 
-type Result[T any] interface {
-	Container[T, Result[T], Result[any]]
-	IsOk() bool
-	IsErr() bool
-	ExpectErr(msg string) error
-	UnwrapErr() error
-	UnwrapBoth() (T, error)
-	OrElse(fnc func(error) Result[T]) Result[T]
-	Err() Option[error]
-	Ok() Option[T]
-}
-
-func ResultMap[T any, E any](r Result[T], fnc func(T) E) Result[E] {
-	var ret Result[E]
-
-	switch r.(type) {
-	case Ok[T]:
-		ret = NewOk[E](fnc(r.Unwrap()))
-	default:
-		ret = NewErr[E](r.UnwrapErr())
-	}
-
-	return ret
-}
-
-func ResultAndThen[T any, E any](r Result[T], fnc func(T) Result[E]) Result[E] {
-	var ret Result[E]
-
-	switch r.(type) {
-	case Ok[T]:
-		ret = fnc(r.Unwrap())
-	default:
-		ret = NewErr[E](r.UnwrapErr())
-	}
-
-	return ret
-}
-
-type Ok[T any] struct {
+type Result[T any] struct {
 	v T
+	e error
 }
 
-func (ok Ok[T]) IsOk() bool {
-	return true
+// RMap invokes the given function to transform the value of this Result if it represents Ok and returns a new Result (Ok); returns the Result (Err) with the same error otherwise
+func RMap[T any, E any](r Result[T], fnc func(T) E) Result[E] {
+	if r.IsOk() {
+		return NewOk(fnc(r.Unwrap()))
+	} else {
+		return NewErr[E](r.UnwrapErr())
+	}
 }
 
-func (ok Ok[T]) IsErr() bool {
-	return false
+// RAndThen invokes the given function to form a new Result if the given Result is Ok; returns the Result (Err) with the same error otherwise
+func RAndThen[T any, E any](r Result[T], fnc func(T) Result[E]) Result[E] {
+	if r.IsOk() {
+		return fnc(r.Unwrap())
+	} else {
+		return NewErr[E](r.UnwrapErr())
+	}
 }
 
-func (ok Ok[T]) Expect(msg string) T {
-	return ok.v
+// IsOk returns true if this Result represents Ok; returns false otherwise
+func (r Result[T]) IsOk() bool {
+	return r.e == nil
 }
 
-func (ok Ok[T]) Unwrap() T {
-	return ok.v
+// IsErr returns true if this Result represents Err; returns false otherwise
+func (r Result[T]) IsErr() bool {
+	return r.e != nil
 }
 
-func (ok Ok[T]) UnwrapOr(def T) T {
-	return ok.v
+// Expect returns this Result underlying value if it represents Ok; panics with the given message otherwise
+func (r Result[T]) Expect(msg string) T {
+	if r.e != nil {
+		panic(msg)
+	}
+
+	return r.v
 }
 
-func (ok Ok[T]) UnwrapOrDefault() T {
-	return ok.v
+// Unwrap returns this Result underlying value if it represents Ok; panics with a generic message otherwise
+func (r Result[T]) Unwrap() T {
+	if r.e != nil {
+		panic("Unwrap on Err")
+	}
+
+	return r.v
 }
 
-func (ok Ok[T]) UnwrapOrElse(fnc func() T) T {
-	return ok.v
+// UnwrapOr returns this Result underlying value if it represents Ok; returns the given default value otherwise
+func (r Result[T]) UnwrapOr(def T) T {
+	if r.e == nil {
+		return r.v
+	} else {
+		return def
+	}
 }
 
-func (ok Ok[T]) ExpectErr(msg string) error {
-	panic(msg)
+// UnwrapOrDefault returns this Result underlying value if it represents Ok; returns the default value for this type otherwise
+func (r Result[T]) UnwrapOrDefault() T {
+	if r.e == nil {
+		return r.v
+	} else {
+		var def T
+		return def
+	}
 }
 
-func (ok Ok[T]) UnwrapErr() error {
-	panic("UnwrapErr on Ok")
+// UnwrapOrElse returns this Result underlying value if it represents Ok; returns the result of invoking the given function otherwise
+func (r Result[T]) UnwrapOrElse(fnc func() T) T {
+	if r.e == nil {
+		return r.v
+	} else {
+		return fnc()
+	}
 }
 
-func (ok Ok[T]) UnwrapBoth() (T, error) {
-	return ok.v, nil
+// ExpectErr returns this Result underlying error if it represents Err; panics with the given message otherwise
+func (r Result[T]) ExpectErr(msg string) error {
+	if r.e == nil {
+		panic(msg)
+	}
+
+	return r.e
 }
 
-func (ok Ok[T]) Err() Option[error] {
-	return NewNone[error]()
+// UnwrapErr returns this Result underlying error if it represents Err; panics with a generic message otherwise
+func (r Result[T]) UnwrapErr() error {
+	if r.e == nil {
+		panic("UnwrapErr on Ok")
+	}
+
+	return r.e
 }
 
-func (ok Ok[T]) Ok() Option[T] {
-	return NewSome(ok.v)
+// UnwrapBoth returns (value, nil) if this Result represents Ok; returns (<default value for T>, err) otherwise
+func (r Result[T]) UnwrapBoth() (T, error) {
+	return r.v, r.e
 }
 
-func (ok Ok[T]) Iter() <-chan T {
-	ch := make(chan T)
-	ch <- ok.v
+// Err returns this Result underlying error as Option (Some) if it represents Err; returns Option (None) otherwise
+func (r Result[T]) Err() Option[error] {
+	if r.e == nil {
+		return NewNone[error]()
+	} else {
+		return NewSome(r.e)
+	}
+}
+
+// Ok returns this Result underlying value as Option (Some) if it represents Ok; returns Option (None) otherwise
+func (r Result[T]) Ok() Option[T] {
+	if r.e == nil {
+		return NewNone[T]()
+	} else {
+		return NewSome(r.v)
+	}
+}
+
+// Iter returns a channel with this Result underlying value if it represents Ok; returns an empty channel otherwise
+func (r Result[T]) Iter() <-chan T {
+	ch := make(chan T, 1)
+
+	if r.e == nil {
+		ch <- r.v
+	}
+
 	close(ch)
 
 	return ch
 }
 
-func (ok Ok[T]) Map(fnc func(T) T) Result[T] {
-	return NewOk(fnc(ok.v))
+// Map invokes the given function to transform the value of this Result if it represents Ok and returns a new Result (Ok); returns the Result (Err) with the same error otherwise
+func (r Result[T]) Map(fnc func(T) T) Result[T] {
+	if r.e == nil {
+		return NewOk[T](fnc(r.v))
+	} else {
+		return r
+	}
 }
 
-func (ok Ok[T]) MapAny(fnc func(T) any) Result[any] {
-	return NewOk(fnc(ok.v))
+// MapAny invokes the given function to transform the value of this Result if it represents Ok and returns a new Result (Ok); returns the Result (Err) with the same error otherwise
+func (r Result[T]) MapAny(fnc func(T) any) Result[any] {
+	if r.e == nil {
+		return NewOk[any](fnc(r.v))
+	} else {
+		return NewErr[any](r.e)
+	}
 }
 
-func (ok Ok[T]) AndThen(fnc func(T) Result[T]) Result[T] {
-	return fnc(ok.v)
+// AndThen invokes the given function to form a new Result if the given Result is Ok; returns the Result (Err) with the same error otherwise
+func (r Result[T]) AndThen(fnc func(T) Result[T]) Result[T] {
+	if r.e == nil {
+		return fnc(r.v)
+	} else {
+		return r
+	}
 }
 
-func (ok Ok[T]) AndThenAny(fnc func(T) Result[any]) Result[any] {
-	return fnc(ok.v)
+// AndThenAny invokes the given function to form a new Result if the given Result is Ok; returns the Result (Err) with the same error otherwise
+func (r Result[T]) AndThenAny(fnc func(T) Result[any]) Result[any] {
+	if r.e == nil {
+		return fnc(r.v)
+	} else {
+		return NewErr[any](r.e)
+	}
 }
 
-func (ok Ok[T]) OrElse(fnc func(error) Result[T]) Result[T] {
-	return ok
+// OrElse returns this Result unmodified if it represents Ok; returns the result of invoking the given function with the underlying error otherwise
+func (r Result[T]) OrElse(fnc func(error) Result[T]) Result[T] {
+	if r.e == nil {
+		return r
+	} else {
+		return fnc(r.e)
+	}
 }
 
-type Err[T any] struct {
-	err error
-}
-
-func (e Err[T]) Error() string {
-	return e.err.Error()
-}
-
-func (e Err[T]) IsOk() bool {
-	return false
-}
-
-func (e Err[T]) IsErr() bool {
-	return true
-}
-
-func (e Err[T]) Expect(msg string) T {
-	panic(msg)
-}
-
-func (e Err[T]) Unwrap() T {
-	panic("Unwrap on Err")
-}
-
-func (e Err[T]) UnwrapOr(def T) T {
-	return def
-}
-
-func (e Err[T]) UnwrapOrDefault() T {
-	var def T
-	return def
-}
-
-func (e Err[T]) UnwrapOrElse(fnc func() T) T {
-	return fnc()
-}
-
-func (e Err[T]) ExpectErr(msg string) error {
-	return e.err
-}
-
-func (e Err[T]) UnwrapErr() error {
-	return e.err
-}
-
-func (e Err[T]) UnwrapBoth() (T, error) {
-	var def T
-	return def, e.err
-}
-
-func (e Err[T]) Err() Option[error] {
-	return NewSome(e.err)
-}
-
-func (e Err[T]) Ok() Option[T] {
-	return NewNone[T]()
-}
-
-func (e Err[T]) Iter() <-chan T {
-	ch := make(chan T)
-	close(ch)
-
-	return ch
-}
-
-func (e Err[T]) Map(fnc func(T) T) Result[T] {
-	return e
-}
-
-func (e Err[T]) MapAny(fnc func(T) any) Result[any] {
-	return Err[any](e)
-}
-
-func (e Err[T]) AndThen(fnc func(T) Result[T]) Result[T] {
-	return e
-}
-
-func (e Err[T]) AndThenAny(fnc func(T) Result[any]) Result[any] {
-	return Err[any](e)
-}
-
-func (e Err[T]) OrElse(fnc func(error) Result[T]) Result[T] {
-	return fnc(e.err)
-}
-
+// NewResult returns a Result (Ok) with the given value if the given error is nil; returns a Result (Err) with the given error otherwise
 func NewResult[T any](v T, err error) Result[T] {
 	if err != nil {
 		return NewErr[T](err)
@@ -211,22 +187,73 @@ func NewResult[T any](v T, err error) Result[T] {
 	}
 }
 
-func NewResultWithV[T any](fnc func() T, err error) Result[T] {
+// NewResult2 see NewResult
+func NewResult2(v1 any, v2 any, err error) Result[[]any] {
 	if err != nil {
-		return NewErr[T](err)
+		return NewErr[[]any](err)
 	} else {
-		return NewOk(fnc())
+		return NewOk([]any{v1, v2})
 	}
 }
 
-func NewResultWithE[T any](v T, fnc func() error) Result[T] {
-	return NewResult(v, fnc())
+// NewResult3 see NewResult
+func NewResult3(v1 any, v2 any, v3 any, err error) Result[[]any] {
+	if err != nil {
+		return NewErr[[]any](err)
+	} else {
+		return NewOk([]any{v1, v2, v2})
+	}
 }
 
+// NewResult4 see NewResult
+func NewResult4(v1 any, v2 any, v3 any, v4 any, err error) Result[[]any] {
+	if err != nil {
+		return NewErr[[]any](err)
+	} else {
+		return NewOk([]any{v1, v2, v3, v4})
+	}
+}
+
+// NewResult5 see NewResult
+func NewResult5(v1 any, v2 any, v3 any, v4 any, v5 any, err error) Result[[]any] {
+	if err != nil {
+		return NewErr[[]any](err)
+	} else {
+		return NewOk([]any{v1, v2, v3, v4, v5})
+	}
+}
+
+// NewResultVararg returns a Result (Err) if the last argument is an error and is not nil; otherwise returns Result (Ok) with all arguments (if the last arguments is not an error) or with all except the last argument (if it's an error)
+func NewResultVararg(v ...any) Result[[]any] {
+	l := len(v)
+
+	if l == 0 {
+		return NewOk([]any{})
+	}
+
+	lastArg := v[l-1]
+	switch lastArg := lastArg.(type) {
+	case error:
+		if lastArg == nil {
+			return NewOk(v[:l-1])
+		} else {
+			return NewErr[[]any](lastArg)
+		}
+	default:
+		return NewOk(v)
+	}
+}
+
+// NewOk returns a Result (Ok) with the given value
 func NewOk[T any](v T) Result[T] {
-	return Ok[T]{v}
+	return Result[T]{
+		v: v,
+	}
 }
 
+// NewErr returns a Result (Err) with the given error
 func NewErr[T any](err error) Result[T] {
-	return Err[T]{err}
+	return Result[T]{
+		e: err,
+	}
 }

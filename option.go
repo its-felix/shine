@@ -1,44 +1,28 @@
 package shine
 
-type Option[T any] interface {
-	Container[T, Option[T], Option[any]]
-	IsSome() bool
-	IsNone() bool
-	OkOr(e error) Result[T]
-	OkOrElse(fnc func() error) Result[T]
-	Filter(fnc func(T) bool) Option[T]
-	OrElse(fnc func() Option[T]) Option[T]
-	ZipAny(other Option[any]) Option[Tuple[any, any]]
-	ZipWithAny(other Option[any], fnc func(T, any) Tuple[any, any]) Option[Tuple[any, any]]
-
-	//Zip(other Option[T]) Option[Tuple[T, T]]
-	//ZipAny(other Option[any]) Option[Tuple[T, any]]
-	//ZipWith(other Option[T], fnc func(T, T) Tuple[T, T]) Option[Tuple[T, T]]
-	//ZipWithAny(other Option[any], fnc func(T, any) Tuple[T, any]) Option[Tuple[T, any]]
+type Option[T any] struct {
+	some bool
+	v    T
 }
 
-var __none = None[any]{}
-
-func OptionMap[T any, E any](o Option[T], fnc func(T) E) Option[E] {
-	var r Option[E]
-
-	switch o.(type) {
-	case Some[T]:
-		r = NewSome(fnc(o.Unwrap()))
-	default:
-		r = NewNone[E]()
+// OMap invokes the given function to transform the value of this Option if it represents a Some and returns a new Some; returns None for None
+func OMap[T any, E any](o Option[T], fnc func(T) E) Option[E] {
+	if o.IsSome() {
+		return NewSome(fnc(o.Unwrap()))
+	} else {
+		return NewNone[E]()
 	}
-
-	return r
 }
 
-func OptionZip[T any, E any](o1 Option[T], o2 Option[E]) Option[Tuple[T, E]] {
-	return OptionZipWith(o1, o2, func(t T, e E) Tuple[T, E] {
+// Zip returns a new Option with both given Options values if both are Some; returns None if any of the two is None
+func Zip[T any, E any](o1 Option[T], o2 Option[E]) Option[Tuple[T, E]] {
+	return ZipWith(o1, o2, func(t T, e E) Tuple[T, E] {
 		return Tuple[T, E]{o1.Unwrap(), o2.Unwrap()}
 	})
 }
 
-func OptionZipWith[T any, E any, O any](o1 Option[T], o2 Option[E], zip func(T, E) O) Option[O] {
+// ZipWith invokes the given function to form a value for a new Option if both are Some; returns None if any of the two is None
+func ZipWith[T any, E any, O any](o1 Option[T], o2 Option[E], zip func(T, E) O) Option[O] {
 	if o1.IsSome() && o2.IsSome() {
 		return NewSome(zip(o1.Unwrap(), o2.Unwrap()))
 	} else {
@@ -46,267 +30,175 @@ func OptionZipWith[T any, E any, O any](o1 Option[T], o2 Option[E], zip func(T, 
 	}
 }
 
-func OptionAndThen[T any, E any](o Option[T], fnc func(T) Option[E]) Option[E] {
-	var r Option[E]
+// OAndThen invokes the given function to form a new Option if the given Option is Some; returns None for None
+func OAndThen[T any, E any](o Option[T], fnc func(T) Option[E]) Option[E] {
+	if o.IsSome() {
+		return fnc(o.Unwrap())
+	} else {
+		return NewNone[E]()
+	}
+}
 
-	switch o.(type) {
-	case Some[T]:
-		r = fnc(o.Unwrap())
-	default:
-		r = NewNone[E]()
+// IsSome returns true if this Option represents a Some
+func (o Option[T]) IsSome() bool {
+	return o.some
+}
+
+// IsNone returns true if this Option represents a None
+func (o Option[T]) IsNone() bool {
+	return !o.some
+}
+
+// Expect returns this Option underlying value if it represents a Some; panics with the given message otherwise
+func (o Option[T]) Expect(msg string) T {
+	if !o.some {
+		panic(msg)
 	}
 
-	return r
+	return o.v
 }
 
-type Some[T any] struct {
-	v T
+// Unwrap returns this Option underlying value if it represents a Some; panics with a generic message otherwise
+func (o Option[T]) Unwrap() T {
+	if !o.some {
+		panic("Unwrap on None")
+	}
+
+	return o.v
 }
 
-func (s Some[T]) IsSome() bool {
-	return true
+// UnwrapOr returns this Option underlying value if it represents a Some; returns the given default value otherwise
+func (o Option[T]) UnwrapOr(def T) T {
+	if o.some {
+		return o.v
+	} else {
+		return def
+	}
 }
 
-func (s Some[T]) IsNone() bool {
-	return false
+// UnwrapOrDefault returns this Option underlying value if it represents a Some; returns the default value for this type otherwise
+func (o Option[T]) UnwrapOrDefault() T {
+	if o.some {
+		return o.v
+	} else {
+		var def T
+		return def
+	}
 }
 
-func (s Some[T]) Expect(msg string) T {
-	return s.v
+// UnwrapOrElse returns this Option underlying value if it represents a Some; returns the result of invoking the given function otherwise
+func (o Option[T]) UnwrapOrElse(fnc func() T) T {
+	if o.some {
+		return o.v
+	} else {
+		return fnc()
+	}
 }
 
-func (s Some[T]) Unwrap() T {
-	return s.v
+// OkOr returns this Option underlying value as a Result (Ok) if it represents a Some; returns a Result (Err) with the given error otherwise
+func (o Option[T]) OkOr(e error) Result[T] {
+	if o.some {
+		return NewOk[T](o.v)
+	} else {
+		return NewErr[T](e)
+	}
 }
 
-func (s Some[T]) UnwrapOr(def T) T {
-	return s.v
+// OkOrElse returns this Option underlying value as a Result (Ok) if it represents a Some; returns a Result (Err) with the error returned by the given function otherwise
+func (o Option[T]) OkOrElse(fnc func() error) Result[T] {
+	if o.some {
+		return NewOk[T](o.v)
+	} else {
+		return NewErr[T](fnc())
+	}
 }
 
-func (s Some[T]) UnwrapOrDefault() T {
-	return s.v
-}
-
-func (s Some[T]) UnwrapOrElse(fnc func() T) T {
-	return s.v
-}
-
-func (s Some[T]) OkOr(e error) Result[T] {
-	return NewOk(s.v)
-}
-
-func (s Some[T]) OkOrElse(fnc func() error) Result[T] {
-	return NewOk(s.v)
-}
-
-func (s Some[T]) Filter(fnc func(T) bool) Option[T] {
-	if fnc(s.v) {
-		return s
+// Filter returns this Option unmodified if it represents a Some and the given function returns true given the value; returns Option (None) otherwise
+func (o Option[T]) Filter(fnc func(T) bool) Option[T] {
+	if o.some && fnc(o.v) {
+		return o
 	} else {
 		return NewNone[T]()
 	}
 }
 
-func (s Some[T]) Iter() <-chan T {
-	ch := make(chan T)
-	ch <- s.v
+// Iter returns a channel with this Option underlying value if it represents a Some; returns an empty channel otherwise
+func (o Option[T]) Iter() <-chan T {
+	ch := make(chan T, 1)
+
+	if o.some {
+		ch <- o.v
+	}
+
 	close(ch)
 
 	return ch
 }
 
-func (s Some[T]) Map(fnc func(T) T) Option[T] {
-	return NewSome(fnc(s.v))
-}
-
-func (s Some[T]) MapAny(fnc func(T) any) Option[any] {
-	return NewSome(fnc(s.v))
-}
-
-func (s Some[T]) AndThen(fnc func(T) Option[T]) Option[T] {
-	return fnc(s.v)
-}
-
-func (s Some[T]) AndThenAny(fnc func(T) Option[any]) Option[any] {
-	return fnc(s.v)
-}
-
-func (s Some[T]) OrElse(fnc func() Option[T]) Option[T] {
-	return s
-}
-
-func (s Some[T]) ZipAny(other Option[any]) Option[Tuple[any, any]] {
-	var r Option[Tuple[any, any]]
-
-	switch other := other.(type) {
-	case Some[any]:
-		r = NewSome(Tuple[any, any]{s.v, other.v})
-	default:
-		r = NewNone[Tuple[any, any]]()
+// Map invokes the given function to transform the value of this Option is it's Some and returns a new Some; returns None for None
+func (o Option[T]) Map(fnc func(T) T) Option[T] {
+	if o.some {
+		return NewSome(fnc(o.v))
+	} else {
+		return NewNone[T]()
 	}
-
-	return r
 }
 
-func (s Some[T]) ZipWithAny(other Option[any], fnc func(T, any) Tuple[any, any]) Option[Tuple[any, any]] {
-	var r Option[Tuple[any, any]]
-
-	switch other := other.(type) {
-	case Some[any]:
-		r = NewSome(fnc(s.v, other.v))
-	default:
-		r = NewNone[Tuple[any, any]]()
+// MapAny invokes the given function to transform the value of this Option is it's Some and returns a new Some; returns None for None
+func (o Option[T]) MapAny(fnc func(T) any) Option[any] {
+	if o.some {
+		return NewSome(fnc(o.v))
+	} else {
+		return NewNone[any]()
 	}
-
-	return r
 }
 
-//func (s Some[T]) Zip(other Option[T]) Option[Tuple[T, T]] {
-//	var r Option[Tuple[T, T]]
-//
-//	switch other := other.(type) {
-//	case Some[T]:
-//		r = NewSome(Tuple[T, T]{s.v, other.v})
-//	default:
-//		r = NewNone[Tuple[T, T]]()
-//	}
-//
-//	return r
-//}
-//
-//func (s Some[T]) ZipAny(other Option[any]) Option[Tuple[T, any]] {
-//	var r Option[Tuple[T, any]]
-//
-//	switch other := other.(type) {
-//	case Some[any]:
-//		r = NewSome(Tuple[T, any]{s.v, other.v})
-//	default:
-//		r = NewNone[Tuple[T, any]]()
-//	}
-//
-//	return r
-//}
-//
-//func (s Some[T]) ZipWith(other Option[T], fnc func(T, T) Tuple[T, T]) Option[Tuple[T, T]] {
-//	var r Option[Tuple[T, T]]
-//
-//	switch other := other.(type) {
-//	case Some[T]:
-//		r = NewSome(fnc(s.v, other.v))
-//	default:
-//		r = NewNone[Tuple[T, T]]()
-//	}
-//
-//	return r
-//}
-//
-//func (s Some[T]) ZipWithAny(other Option[any], fnc func(T, any) Tuple[T, any]) Option[Tuple[T, any]] {
-//	var r Option[Tuple[T, any]]
-//
-//	switch other := other.(type) {
-//	case Some[any]:
-//		r = NewSome(fnc(s.v, other.v))
-//	default:
-//		r = NewNone[Tuple[T, any]]()
-//	}
-//
-//	return r
-//}
-
-type None[T any] struct{}
-
-func (n None[T]) IsSome() bool {
-	return false
+// AndThen invokes the given function to form a new Option if the given Option is Some; returns None for None
+func (o Option[T]) AndThen(fnc func(T) Option[T]) Option[T] {
+	if o.some {
+		return fnc(o.v)
+	} else {
+		return NewNone[T]()
+	}
 }
 
-func (n None[T]) IsNone() bool {
-	return true
+// AndThenAny invokes the given function to form a new Option if the given Option is Some; returns None for None
+func (o Option[T]) AndThenAny(fnc func(T) Option[any]) Option[any] {
+	if o.some {
+		return fnc(o.v)
+	} else {
+		return NewNone[any]()
+	}
 }
 
-func (n None[T]) Expect(msg string) T {
-	panic(msg)
+// OrElse returns this Option unmodified if it represents a Some; returns the result of invoking the given function otherwise
+func (o Option[T]) OrElse(fnc func() Option[T]) Option[T] {
+	if o.some {
+		return o
+	} else {
+		return fnc()
+	}
 }
 
-func (n None[T]) Unwrap() T {
-	panic("Unwrap on None")
+// ZipAny returns a new Option with both given Options values if both are Some; returns None if any of the two is None
+func (o Option[T]) ZipAny(other Option[any]) Option[[2]any] {
+	if o.some {
+		return NewSome([2]any{o.v, other.v})
+	} else {
+		return NewNone[[2]any]()
+	}
 }
 
-func (n None[T]) UnwrapOr(def T) T {
-	return def
+// ZipWithAny invokes the given function to form a value for a new Option if both are Some; returns None if any of the two is None
+func (o Option[T]) ZipWithAny(other Option[any], fnc func(T, any) [2]any) Option[[2]any] {
+	if o.some {
+		return NewSome(fnc(o.v, other.v))
+	} else {
+		return NewNone[[2]any]()
+	}
 }
 
-func (n None[T]) UnwrapOrDefault() T {
-	var def T
-	return def
-}
-
-func (n None[T]) UnwrapOrElse(fnc func() T) T {
-	return fnc()
-}
-
-func (n None[T]) OkOr(e error) Result[T] {
-	return NewErr[T](e)
-}
-
-func (n None[T]) OkOrElse(fnc func() error) Result[T] {
-	return NewErr[T](fnc())
-}
-
-func (n None[T]) Filter(fnc func(T) bool) Option[T] {
-	return n
-}
-
-func (n None[T]) Iter() <-chan T {
-	ch := make(chan T)
-	close(ch)
-
-	return ch
-}
-
-func (n None[T]) Map(fnc func(T) T) Option[T] {
-	return n
-}
-
-func (n None[T]) MapAny(fnc func(T) any) Option[any] {
-	return None[any](n)
-}
-
-func (n None[T]) AndThen(fnc func(T) Option[T]) Option[T] {
-	return n
-}
-
-func (n None[T]) AndThenAny(fnc func(T) Option[any]) Option[any] {
-	return None[any](n)
-}
-
-func (n None[T]) OrElse(fnc func() Option[T]) Option[T] {
-	return fnc()
-}
-
-func (n None[T]) ZipAny(other Option[any]) Option[Tuple[any, any]] {
-	return NewNone[Tuple[any, any]]()
-}
-
-func (n None[T]) ZipWithAny(other Option[any], fnc func(T, any) Tuple[any, any]) Option[Tuple[any, any]] {
-	return NewNone[Tuple[any, any]]()
-}
-
-//func (n None[T]) Zip(other Option[T]) Option[Tuple[T, T]] {
-//	return NewNone[Tuple[T, T]]()
-//}
-//
-//func (n None[T]) ZipAny(other Option[any]) Option[Tuple[T, any]] {
-//	return NewNone[Tuple[T, any]]()
-//}
-//
-//func (n None[T]) ZipWith(other Option[T], fnc func(T, T) Tuple[T, T]) Option[Tuple[T, T]] {
-//	return NewNone[Tuple[T, T]]()
-//}
-//
-//func (n None[T]) ZipWithAny(other Option[any], fnc func(T, any) Tuple[T, any]) Option[Tuple[T, any]] {
-//	return NewNone[Tuple[T, any]]()
-//}
-
+// NewOption returns an Option (Some) with the given pointers value if it's not nil; returns Option (None) otherwise
 func NewOption[T any](v *T) Option[T] {
 	if v == nil {
 		return NewNone[T]()
@@ -315,10 +207,15 @@ func NewOption[T any](v *T) Option[T] {
 	}
 }
 
+// NewSome returns an Option (Some) with the given value
 func NewSome[T any](v T) Option[T] {
-	return Some[T]{v}
+	return Option[T]{
+		some: true,
+		v:    v,
+	}
 }
 
+// NewNone returns an Option (None)
 func NewNone[T any]() Option[T] {
-	return None[T](__none)
+	return Option[T]{}
 }
