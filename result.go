@@ -5,7 +5,7 @@ type Result[T any, E error] interface {
 	IsOkAnd(fn func(v T) bool) bool
 	IsErr() bool
 	IsErrAnd(fn func(v E) bool) bool
-	Get() (T, E)
+	Get() (T, E, bool)
 	Expect(panicV any) T
 	ExpectErr(panicV any) E
 	Unwrap() T

@@ -22,9 +22,9 @@ func (e Err[T, E]) IsErrAnd(fn func(e E) bool) bool {
 	return fn(e.err)
 }
 
-func (e Err[T, E]) Get() (T, E) {
+func (e Err[T, E]) Get() (T, E, bool) {
 	var def T
-	return def, e.err
+	return def, e.err, false
 }
 
 func (e Err[T, E]) Expect(panicV any) T {

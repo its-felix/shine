@@ -20,9 +20,9 @@ func (o Ok[T, E]) IsErrAnd(fn func(e E) bool) bool {
 	return false
 }
 
-func (o Ok[T, E]) Get() (T, E) {
+func (o Ok[T, E]) Get() (T, E, bool) {
 	var def E
-	return o.v, def
+	return o.v, def, true
 }
 
 func (o Ok[T, E]) Expect(panicV any) T {
