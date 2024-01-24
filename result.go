@@ -33,3 +33,35 @@ func NewResult[T any, E error](v T, err E) Result[T, E] {
 
 	return NewOk[T, E](v)
 }
+
+func ResMap[T any, E error, R any](r Result[T, E], fn func(v T) R) Result[R, E] {
+	if v, err, ok := r.Get(); ok {
+		return NewOk[R, E](fn(v))
+	} else {
+		return NewErr[R](err)
+	}
+}
+
+func ResAndThen[T any, E error, R any](r Result[T, E], fn func(v T) Result[R, E]) Result[R, E] {
+	if v, err, ok := r.Get(); ok {
+		return fn(v)
+	} else {
+		return NewErr[R](err)
+	}
+}
+
+func ResMapErr[T any, E error, R error](r Result[T, E], fn func(err E) R) Result[T, R] {
+	if v, err, ok := r.Get(); ok {
+		return NewOk[T, R](v)
+	} else {
+		return NewErr[T](fn(err))
+	}
+}
+
+func ResOrElse[T any, E error, R error](r Result[T, E], fn func(e E) Result[T, R]) Result[T, R] {
+	if v, err, ok := r.Get(); ok {
+		return NewOk[T, R](v)
+	} else {
+		return fn(err)
+	}
+}

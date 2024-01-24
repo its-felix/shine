@@ -38,3 +38,19 @@ func NewOptionFrom[T any](v T, ok bool) Option[T] {
 
 	return NewNone[T]()
 }
+
+func OptMap[T any, R any](o Option[T], fn func(v T) R) Option[R] {
+	if v, ok := o.Get(); ok {
+		return NewSome(fn(v))
+	}
+
+	return NewNone[R]()
+}
+
+func OptAndThen[T any, R any](o Option[T], fn func(v T) Option[R]) Option[R] {
+	if v, ok := o.Get(); ok {
+		return fn(v)
+	}
+
+	return NewNone[R]()
+}
