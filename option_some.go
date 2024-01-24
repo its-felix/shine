@@ -12,6 +12,10 @@ func (s Some[T]) IsNone() bool {
 	return false
 }
 
+func (s Some[T]) Get() (T, bool) {
+	return s.v, true
+}
+
 func (s Some[T]) Expect(panicV any) T {
 	return s.v
 }

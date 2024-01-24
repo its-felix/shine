@@ -10,6 +10,11 @@ func (n None[T]) IsNone() bool {
 	return true
 }
 
+func (n None[T]) Get() (T, bool) {
+	var def T
+	return def, false
+}
+
 func (n None[T]) Expect(panicV any) T {
 	panic(panicV)
 }

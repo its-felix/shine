@@ -1,12 +1,11 @@
 package shine
 
-import "reflect"
-
 type Result[T any, E error] interface {
 	IsOk() bool
 	IsOkAnd(fn func(v T) bool) bool
 	IsErr() bool
 	IsErrAnd(fn func(v E) bool) bool
+	Get() (T, E)
 	Expect(panicV any) T
 	ExpectErr(panicV any) E
 	Unwrap() T
@@ -28,14 +27,8 @@ type Result[T any, E error] interface {
 }
 
 func NewResult[T any, E error](v T, err E) Result[T, E] {
-	errV := reflect.ValueOf(err)
-	switch errV.Kind() {
-	case reflect.Ptr, reflect.Interface, reflect.Slice, reflect.Map, reflect.Chan, reflect.Func:
-		if !errV.IsNil() {
-			return NewErr[T](err)
-		}
-
-	default:
+	if !isNil(err) {
+		return NewErr[T](err)
 	}
 
 	return NewOk[T, E](v)

@@ -3,6 +3,7 @@ package shine
 type Option[T any] interface {
 	IsSome() bool
 	IsNone() bool
+	Get() (T, bool)
 	Expect(panicV any) T
 	Unwrap() T
 	UnwrapOr(def T) T
@@ -24,4 +25,16 @@ func NewOption[T any](v *T) Option[T] {
 	}
 
 	return NewSome(*v)
+}
+
+func NewOptionOf[T any](v T) Option[T] {
+	return NewOptionFrom(v, !isNil(v))
+}
+
+func NewOptionFrom[T any](v T, ok bool) Option[T] {
+	if ok {
+		return NewSome(v)
+	}
+
+	return NewNone[T]()
 }
