@@ -16,12 +16,9 @@ func (s Some[T]) Get() (T, bool) {
 	return s.v, true
 }
 
-func (s Some[T]) Expect(panicV any) T {
-	return s.v
-}
-
-func (s Some[T]) Unwrap() T {
-	return s.v
+func (s Some[T]) IfPresent(fn func(v T)) bool {
+	fn(s.v)
+	return true
 }
 
 func (s Some[T]) UnwrapOr(def T) T {
@@ -36,12 +33,12 @@ func (s Some[T]) UnwrapOrElse(fn func() T) T {
 	return s.v
 }
 
-func (s Some[T]) OkOr(err error) Result[T, error] {
-	return NewOk[T, error](s.v)
+func (s Some[T]) OkOr(err error) Result[T] {
+	return NewOk[T](s.v)
 }
 
-func (s Some[T]) OkOrElse(fn func() error) Result[T, error] {
-	return NewOk[T, error](s.v)
+func (s Some[T]) OkOrElse(fn func() error) Result[T] {
+	return NewOk[T](s.v)
 }
 
 func (s Some[T]) Filter(predicate func(v T) bool) Option[T] {
@@ -78,6 +75,10 @@ func (s Some[T]) Iter() <-chan T {
 	close(ch)
 
 	return ch
+}
+
+func (s Some[T]) Value() T {
+	return s.v
 }
 
 func NewSome[T any](v T) Some[T] {

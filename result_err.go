@@ -1,110 +1,118 @@
 package shine
 
-import "errors"
+import (
+	"errors"
+	"io"
+)
 
-type Err[T any, E error] struct {
-	err E
+type Err[T any] struct {
+	error
 }
 
-func (e Err[T, E]) IsOk() bool {
+func (e Err[T]) IsOk() bool {
 	return false
 }
 
-func (e Err[T, E]) IsOkAnd(fn func(v T) bool) bool {
+func (e Err[T]) IsOkAnd(fn func(v T) bool) bool {
 	return false
 }
 
-func (e Err[T, E]) IsErr() bool {
+func (e Err[T]) IsErr() bool {
 	return true
 }
 
-func (e Err[T, E]) IsErrAnd(fn func(e E) bool) bool {
-	return fn(e.err)
+func (e Err[T]) IsErrAnd(fn func(e error) bool) bool {
+	return fn(e)
 }
 
-func (e Err[T, E]) Get() (T, E, bool) {
+func (e Err[T]) Get() (T, error, bool) {
 	var def T
-	return def, e.err, false
+	return def, e, false
 }
 
-func (e Err[T, E]) Expect(panicV any) T {
-	panic(panicV)
+func (e Err[T]) IfPresent(fn func(v T)) bool {
+	return false
 }
 
-func (e Err[T, E]) ExpectErr(panicV any) E {
-	return e.err
-}
-
-func (e Err[T, E]) Unwrap() T {
-	panic("Unwrap on Err")
-}
-
-func (e Err[T, E]) UnwrapErr() E {
-	return e.err
-}
-
-func (e Err[T, E]) UnwrapOr(def T) T {
+func (e Err[T]) UnwrapOr(def T) T {
 	return def
 }
 
-func (e Err[T, E]) UnwrapOrDefault() T {
+func (e Err[T]) UnwrapOrDefault() T {
 	var def T
 	return def
 }
 
-func (e Err[T, E]) UnwrapOrElse(fn func() T) T {
-	return fn()
+func (e Err[T]) UnwrapOrElse(fn func(e error) T) T {
+	return fn(e)
 }
 
-func (e Err[T, E]) And(other Result[T, E]) Result[T, E] {
+func (e Err[T]) And(other Result[T]) Result[T] {
 	return e
 }
 
-func (e Err[T, E]) AndThen(fn func(v T) Result[T, E]) Result[T, E] {
+func (e Err[T]) AndThen(fn func(v T) Result[T]) Result[T] {
 	return e
 }
 
-func (e Err[T, E]) Map(fn func(v T) T) Result[T, E] {
+func (e Err[T]) Map(fn func(v T) T) Result[T] {
 	return e
 }
 
-func (e Err[T, E]) MapErr(fn func(e E) E) Result[T, E] {
-	return NewErr[T](fn(e.err))
+func (e Err[T]) MapErr(fn func(e error) error) Result[T] {
+	return NewErr[T](fn(e))
 }
 
-func (e Err[T, E]) MapOr(def T, fn func(v T) T) T {
+func (e Err[T]) MapOr(def T, fn func(v T) T) T {
 	return def
 }
 
-func (e Err[T, E]) MapOrElse(fnOk func(v T) T, fnErr func(e E) T) T {
-	return fnErr(e.err)
+func (e Err[T]) MapOrElse(fnOk func(v T) T, fnErr func(e error) T) T {
+	return fnErr(e)
 }
 
-func (e Err[T, E]) Ok() Option[T] {
+func (e Err[T]) Ok() Option[T] {
 	return NewNone[T]()
 }
 
-func (e Err[T, E]) Err() Option[E] {
-	return NewSome[E](e.err)
+func (e Err[T]) Err() Option[error] {
+	return NewSome[error](e)
 }
 
-func (e Err[T, E]) Or(other Result[T, E]) Result[T, E] {
+func (e Err[T]) Or(other Result[T]) Result[T] {
 	return other
 }
 
-func (e Err[T, E]) OrElse(fn func(e E) Result[T, E]) Result[T, E] {
-	return fn(e.err)
+func (e Err[T]) OrElse(fn func(e error) Result[T]) Result[T] {
+	return fn(e)
 }
 
-func (e Err[T, E]) Iter() <-chan T {
+func (e Err[T]) Iter() <-chan T {
 	ch := make(chan T)
 	close(ch)
 
 	return ch
 }
 
-func NewErr[T any, E error](err E) Err[T, E] {
-	return Err[T, E]{err}
+func (e Err[T]) Close() error {
+	if cl, ok := e.error.(io.Closer); ok {
+		return cl.Close()
+	}
+
+	return nil
 }
 
-var _ Result[struct{}, error] = NewErr[struct{}](errors.ErrUnsupported)
+func (e Err[T]) Is(err error) bool {
+	return errors.Is(e.error, err)
+}
+
+func (e Err[T]) As(v any) bool {
+	// passed value as expected to be a pointer
+	return errors.As(e.error, v)
+}
+
+func NewErr[T any, E error](err E) Err[T] {
+	return Err[T]{err}
+}
+
+var _ Result[struct{}] = Err[struct{}]{}

@@ -15,12 +15,8 @@ func (n None[T]) Get() (T, bool) {
 	return def, false
 }
 
-func (n None[T]) Expect(panicV any) T {
-	panic(panicV)
-}
-
-func (n None[T]) Unwrap() T {
-	panic("Unwrap on None")
+func (n None[T]) IfPresent(fn func(v T)) bool {
+	return false
 }
 
 func (n None[T]) UnwrapOr(def T) T {
@@ -36,11 +32,11 @@ func (n None[T]) UnwrapOrElse(fn func() T) T {
 	return fn()
 }
 
-func (n None[T]) OkOr(err error) Result[T, error] {
+func (n None[T]) OkOr(err error) Result[T] {
 	return NewErr[T](err)
 }
 
-func (n None[T]) OkOrElse(fn func() error) Result[T, error] {
+func (n None[T]) OkOrElse(fn func() error) Result[T] {
 	return NewErr[T](fn())
 }
 

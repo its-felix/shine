@@ -41,3 +41,29 @@ func ExampleShine() string {
     return shine.ResMap(shine.NewResult(url.Parse("https://github.com/")), (*url.URL).Hostname).UnwrapOrDefault()
 }
 ```
+
+#### Closeable Support
+```golang
+r := shine.NewResult(os.Open("file.txt"))
+// will call Close() on the contained value if it implements io.Closer
+defer r.Close()
+```
+
+#### Type switch
+```golang
+r := shine.NewResult(os.Open("file.txt"))
+defer r.Close()
+
+switch r := r.(type) {
+case Ok[*os.File]:
+	f := r.Value()
+	// do something with file
+	
+case Err[*os.File]:
+	// handle error
+	var pe *os.PathError
+	if errors.As(r, &pe) { 
+		// handle path error 
+	}
+}
+```

@@ -4,13 +4,12 @@ type Option[T any] interface {
 	IsSome() bool
 	IsNone() bool
 	Get() (T, bool)
-	Expect(panicV any) T
-	Unwrap() T
+	IfPresent(fn func(v T)) bool
 	UnwrapOr(def T) T
 	UnwrapOrDefault() T
 	UnwrapOrElse(fn func() T) T
-	OkOr(err error) Result[T, error]
-	OkOrElse(fn func() error) Result[T, error]
+	OkOr(err error) Result[T]
+	OkOrElse(fn func() error) Result[T]
 	Filter(predicate func(v T) bool) Option[T]
 	Map(fn func(v T) T) Option[T]
 	AndThen(fn func(v T) Option[T]) Option[T]
