@@ -2,23 +2,6 @@ package shine
 
 type None[T any] struct{}
 
-func (n None[T]) IsSome() bool {
-	return false
-}
-
-func (n None[T]) IsNone() bool {
-	return true
-}
-
-func (n None[T]) Get() (T, bool) {
-	var def T
-	return def, false
-}
-
-func (n None[T]) IfPresent(fn func(v T)) bool {
-	return false
-}
-
 func (n None[T]) UnwrapOr(def T) T {
 	return def
 }
@@ -44,16 +27,8 @@ func (n None[T]) Filter(predicate func(v T) bool) Option[T] {
 	return n
 }
 
-func (n None[T]) Map(fn func(v T) T) Option[T] {
-	return n
-}
-
 func (n None[T]) AndThen(fn func(v T) Option[T]) Option[T] {
 	return n
-}
-
-func (n None[T]) OrElse(fn func() Option[T]) Option[T] {
-	return fn()
 }
 
 func (n None[T]) Xor(other Option[T]) Option[T] {
@@ -64,11 +39,8 @@ func (n None[T]) Xor(other Option[T]) Option[T] {
 	return n
 }
 
-func (n None[T]) Iter() <-chan T {
-	ch := make(chan T)
-	close(ch)
+func (None[T]) option() {
 
-	return ch
 }
 
 func NewNone[T any]() None[T] {

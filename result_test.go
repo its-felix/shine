@@ -32,7 +32,7 @@ func (v *closeableError) Error() string {
 func TestNewResultForErr(t *testing.T) {
 	r := NewResult(strconv.Atoi("not a number"))
 
-	if r.IsOk() {
+	if _, ok := r.(Ok[int]); ok {
 		t.Log("NewResult(value, not nil) should return Err")
 		t.FailNow()
 	}
@@ -41,7 +41,7 @@ func TestNewResultForErr(t *testing.T) {
 func TestNewResultForNonErr(t *testing.T) {
 	r := NewResult(strconv.Atoi("1"))
 
-	if r.IsErr() {
+	if _, ok := r.(Err[int]); ok {
 		t.Log("NewResult(value, nil) should return Ok")
 		t.FailNow()
 	}

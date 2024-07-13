@@ -8,7 +8,7 @@ func TestNewOptionForNil(t *testing.T) {
 	var s *string
 	opt := NewOption(s)
 
-	if opt.IsSome() {
+	if _, ok := opt.(Some[*string]); ok {
 		t.Log("NewOption(nil) should return None")
 		t.FailNow()
 	}
@@ -17,7 +17,7 @@ func TestNewOptionForNil(t *testing.T) {
 func TestNewOptionForNonNil(t *testing.T) {
 	opt := NewOption(&struct{}{})
 
-	if opt.IsNone() {
+	if _, ok := opt.(None[*struct{}]); ok {
 		t.Log("NewOption(not nil) should return Some")
 		t.FailNow()
 	}

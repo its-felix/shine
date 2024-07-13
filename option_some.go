@@ -1,64 +1,37 @@
 package shine
 
-type Some[T any] struct {
-	v T
-}
-
-func (s Some[T]) IsSome() bool {
-	return true
-}
-
-func (s Some[T]) IsNone() bool {
-	return false
-}
-
-func (s Some[T]) Get() (T, bool) {
-	return s.v, true
-}
-
-func (s Some[T]) IfPresent(fn func(v T)) bool {
-	fn(s.v)
-	return true
-}
+type Some[T any] [1]T
 
 func (s Some[T]) UnwrapOr(def T) T {
-	return s.v
+	return s[0]
 }
 
 func (s Some[T]) UnwrapOrDefault() T {
-	return s.v
+	return s[0]
 }
 
 func (s Some[T]) UnwrapOrElse(fn func() T) T {
-	return s.v
+	return s[0]
 }
 
 func (s Some[T]) OkOr(err error) Result[T] {
-	return NewOk[T](s.v)
+	return NewOk[T](s[0])
 }
 
 func (s Some[T]) OkOrElse(fn func() error) Result[T] {
-	return NewOk[T](s.v)
+	return NewOk[T](s[0])
 }
 
 func (s Some[T]) Filter(predicate func(v T) bool) Option[T] {
-	if predicate(s.v) {
+	if predicate(s[0]) {
 		return s
 	}
 
 	return NewNone[T]()
 }
 
-func (s Some[T]) Map(fn func(v T) T) Option[T] {
-	return NewSome(fn(s.v))
-}
-
 func (s Some[T]) AndThen(fn func(v T) Option[T]) Option[T] {
-	return fn(s.v)
-}
-
-func (s Some[T]) OrElse(fn func() Option[T]) Option[T] {
-	return s
+	return fn(s[0])
 }
 
 func (s Some[T]) Xor(other Option[T]) Option[T] {
@@ -69,16 +42,12 @@ func (s Some[T]) Xor(other Option[T]) Option[T] {
 	return NewNone[T]()
 }
 
-func (s Some[T]) Iter() <-chan T {
-	ch := make(chan T, 1)
-	ch <- s.v
-	close(ch)
+func (Some[T]) option() {
 
-	return ch
 }
 
 func (s Some[T]) Value() T {
-	return s.v
+	return s[0]
 }
 
 func NewSome[T any](v T) Some[T] {
