@@ -14,4 +14,4 @@ jobs:
         with:
           go-version-file: 'go.mod'
       - run: go test ./...
-      - run: GOPROXY=proxy.golang.org go list -m github.com/its-felix/shine@${{ github.ref_name }}
+      - run: GOPROXY=proxy.golang.org go list -m github.com/its-felix/shine/v3@${{ github.ref_name }}
