@@ -1,8 +1,8 @@
 # shine
 <small>like metal prior oxidation</small>
 
-[![Go Reference](https://pkg.go.dev/badge/github.com/its-felix/shine.svg)](https://pkg.go.dev/github.com/its-felix/shine)
-[![Go Report](https://goreportcard.com/badge/github.com/its-felix/shine?style=flat-square)](https://goreportcard.com/report/github.com/its-felix/shine)
+[![Go Reference](https://pkg.go.dev/badge/github.com/its-felix/shine/v3.svg)](https://pkg.go.dev/github.com/its-felix/shine/v3)
+[![Go Report](https://goreportcard.com/badge/github.com/its-felix/shine/v3?style=flat-square)](https://goreportcard.com/report/github.com/its-felix/shine/v3)
 
 Rust inspired implementation of `Option[T]` and `Result[T]` for Go.
 
