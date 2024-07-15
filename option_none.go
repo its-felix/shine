@@ -47,4 +47,4 @@ func NewNone[T any]() None[T] {
 	return None[T]{}
 }
 
-var _ Option[struct{}] = NewNone[struct{}]()
+var _ Option[struct{}] = (*None[struct{}])(nil)

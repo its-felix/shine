@@ -54,4 +54,4 @@ func NewSome[T any](v T) Some[T] {
 	return Some[T]{v}
 }
 
-var _ Option[struct{}] = NewSome(struct{}{})
+var _ Option[struct{}] = (*Some[struct{}])(nil)

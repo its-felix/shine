@@ -68,4 +68,4 @@ func NewErr[T any](err error) Err[T] {
 var _ interface {
 	Result[struct{}]
 	error
-} = Err[struct{}]{}
+} = (*Err[struct{}])(nil)

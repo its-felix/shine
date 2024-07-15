@@ -48,4 +48,4 @@ func NewOk[T any](v T) Ok[T] {
 	return Ok[T]{v}
 }
 
-var _ Result[struct{}] = Ok[struct{}]{}
+var _ Result[struct{}] = (*Ok[struct{}])(nil)
