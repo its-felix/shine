@@ -1,13 +1,15 @@
 package shine
 
+import "io"
+
 type Result[T any] interface {
+	io.Closer
 	UnwrapOr(def T) T
 	UnwrapOrDefault() T
 	UnwrapOrElse(fn func(e error) T) T
 	AndThen(fn func(v T) Result[T]) Result[T]
 	Ok() Option[T]
 	Err() Option[error]
-	Close() error
 	result()
 }
 
