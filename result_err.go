@@ -61,7 +61,7 @@ func (e Err[T]) As(v any) bool {
 	return errors.As(e[0], v)
 }
 
-func NewErr[T any, E error](err E) Err[T] {
+func NewErr[T any](err error) Err[T] {
 	return Err[T]{err}
 }
 
