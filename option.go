@@ -23,3 +23,8 @@ func NewOptionFrom[T any](v T, ok bool) Option[T] {
 
 	return NewNone[T]()
 }
+
+func NewOptionFromMap[K comparable, V any](m map[K]V, k K) Option[V] {
+	v, ok := m[k]
+	return NewOptionFrom(v, ok)
+}
